@@ -3,6 +3,7 @@ module.exports = app => {
   app.on([
     'pull_request.opened',
     'pull_request.synchronize',
+    'check_suite.reqquested',
     'check_run.rerequested'
   ],
     check
