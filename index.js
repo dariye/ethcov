@@ -1,29 +1,104 @@
-// Checks API example
-// See: https://developer.github.com/v3/checks/ to learn more
+const getEthcovStatus = require('./lib/ethcov.js')
 module.exports = app => {
-  app.on(['check_suite.requested', 'check_run.rerequested'], check)
+  app.on([
+    'pull_request.opened',
+    'pull_request.synchronize',
+    'check_suite.requested',
+    'check_run.rerequested'
+  ],
+    check
+  )
 
   async function check (context) {
-    // Do stuff
-    const { head_branch, head_sha } = context.payload.check_suite
-    // Probot API note: context.repo() => {username: 'hiimbex', repo: 'testing-things'}
-    return context.github.checks.create(context.repo({
-      name: 'My app!',
-      head_branch,
-      head_sha,
-      status: 'completed',
-      conclusion: 'success',
-      completed_at: new Date(),
-      output: {
-        title: 'Probot check!',
-        summary: 'The check has passed!'
-      }
+    const config = await context.config('ethcov.yml')
+
+    const pr = context.payload.pull_request
+
+    const { base, head } = pr
+
+    const compare = await context.github.repos.compareCommits(context.repo({
+      base: base.sha,
+      head: head.sha
     }))
+
+    const commits = compare.data.commits
+
+    const ethcovFailed = await getEthcovStatus(commits, config, pr.html_url)
+
+    if (!ethcovFailed.length) {
+      context.github.checks.create(context.repo({
+        name: 'Ethcov',
+        head_branch: head.ref,
+        head_sha: head.sha,
+        status: 'completed',
+        conclusion: 'success',
+        completed_at: new Date(),
+        output: {
+          title: 'Ethcove',
+          summary: 'All commits pass ethical considerations check!'
+        }
+      }))
+        .catch(function checkFails(error) {
+          if (error.code === 403) {
+            const params = {
+              sha: head.sha,
+              context: 'Ethcov',
+              state: 'success',
+              description: 'All commits pass ethical considerations check!',
+              target_url: 'https://github.com/pauldariye/ethcov'
+            }
+            return context.github.repos.createStatus(context.repo(params))
+          }
+        })
+    } else {
+      let summary = []
+      ethcovFailed.forEach(function (commit) {
+        summary.push(`Commit sha: [${commit.sha.substr(0, 7)}](${commit.url}), Author: ${commit.author}, Committer: ${commit.committer}; ${commit.message}`)
+      })
+
+      summary = summary.join('\n')
+
+      if (ethcovFailed.length === 1) summary = `${handleOneCommit(pr, ethcovFailed)} \n\n ${summary}`
+      else summary = `${handleMultipleCommits(pr, commits.length, ethcovFailed)} \n\n ${summary}`
+
+      context.github.checks.create(context.repo({
+        name: 'Ethcov',
+        head_branch: head.ref,
+        head_sha: head.sha,
+        status: 'completed',
+        conclusion: 'action_required',
+        completed_at: new Data(),
+        output: {
+          title: 'Ethcov',
+          summary
+        },
+        actions: [{
+          label: 'Add ethical considerations to pass',
+          description: 'would set status to passing',
+          identifier: 'override'
+        }]
+      }))
+        .catch(function checkFails(error) {
+          if (error.code === 403) {
+            const description = ethcovFailed[(ethcovFailed.length - 1)].message.substring(0, 140)
+            const params = {
+              sha: head.sha,
+              context: 'Ethcov',
+              state: 'failure',
+              description,
+              target_url: 'https://github.com/pauldariye/ethcov'
+            }
+            return context.github.repos.createStatus(context.repo(params))
+          }
+        })
+    }
   }
+}
 
-  // For more information on building apps:
-  // https://probot.github.io/docs/
+function handleOneCommit(pr, ethcovFailed) {
+  return `You only have one commit incorrectly signed`
+}
 
-  // To get your app running against GitHub, see:
-  // https://probot.github.io/docs/development/
+function handleMultipleCommits(pr, commitLength, ethcovFailed) {
+  return `You only have ${ethcovFailed.length} commits incorrectly signed`
 }
