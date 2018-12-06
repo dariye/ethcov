@@ -3,7 +3,6 @@ module.exports = app => {
   app.on([
     'pull_request.opened',
     'pull_request.synchronize',
-    'check_suite.requested',
     'check_run.rerequested'
   ],
     check
@@ -14,11 +13,9 @@ module.exports = app => {
 
     const pr = context.payload.pull_request
 
-    const { base, head } = pr
-
     const compare = await context.github.repos.compareCommits(context.repo({
-      base: base.sha,
-      head: head.sha
+      base: pr.base.sha,
+      head: pr.head.sha
     }))
 
     const commits = compare.data.commits
@@ -28,8 +25,8 @@ module.exports = app => {
     if (!ethcovFailed.length) {
       context.github.checks.create(context.repo({
         name: 'Ethcov',
-        head_branch: head.ref,
-        head_sha: head.sha,
+        head_branch: pr.head.ref,
+        head_sha: pr.head.sha,
         status: 'completed',
         conclusion: 'success',
         completed_at: new Date(),
@@ -41,7 +38,7 @@ module.exports = app => {
         .catch(function checkFails(error) {
           if (error.code === 403) {
             const params = {
-              sha: head.sha,
+              sha: pr.head.sha,
               context: 'Ethcov',
               state: 'success',
               description: 'All commits pass ethical considerations check!',
@@ -63,8 +60,8 @@ module.exports = app => {
 
       context.github.checks.create(context.repo({
         name: 'Ethcov',
-        head_branch: head.ref,
-        head_sha: head.sha,
+        head_branch: pr.head.ref,
+        head_sha: pr.head.sha,
         status: 'completed',
         conclusion: 'action_required',
         completed_at: new Data(),
@@ -82,7 +79,7 @@ module.exports = app => {
           if (error.code === 403) {
             const description = ethcovFailed[(ethcovFailed.length - 1)].message.substring(0, 140)
             const params = {
-              sha: head.sha,
+              sha: pr.head.sha,
               context: 'Ethcov',
               state: 'failure',
               description,

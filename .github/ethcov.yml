@@ -1,6 +1,6 @@
 # Configuration for https://github.com/probot/stale
 _extends: .github
-
 signature: Signature
 principles:
-  - To the best of my knowledge, at the time of this contribution, that no portion of this work lends itself to be easily exploited to collect information about users without their explicit consent;
+  header: "I hereby certify that"
+  - "To the best of my knowledge, at the time of this contribution, that no portion of this work lends itself to be easily exploited to collect information about users without their explicit consent;"
