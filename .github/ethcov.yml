@@ -3,4 +3,5 @@ _extends: .github
 signature: Signature
 principles:
   header: "I hereby certify that"
-  - "To the best of my knowledge, at the time of this contribution, that no portion of this work lends itself to be easily exploited to collect information about users without their explicit consent;"
+  terms:
+    - "To the best of my knowledge, at the time of this contribution, that no portion of this work lends itself to be easily exploited to collect information about users without their explicit consent;"

@@ -23,7 +23,6 @@ module.exports = app => {
 
     const ethcovFailed = await getEthcovStatus(commits, config, pr.html_url)
 
-    context.log('ethcov status', ethcovFailed)
 
     if (!ethcovFailed.length) {
       context.github.checks.create(context.repo({
