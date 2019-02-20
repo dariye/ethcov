@@ -1,7 +1,7 @@
 {
   "name": "ethcov",
   "version": "1.0.0",
-  "description": "Ethics considerations for your codebase",
+  "description": "Ethical considerations for your codebase",
   "author": "Paul Dariye <paul.dariye@gmail.com> (ethcov.org)",
   "license": "ISC",
   "repository": "https://github.com//ethcov.git",
@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "email-validator": "^2.0.4",
+    "js-yaml": "^3.12.0",
     "probot": "^7.2.0"
   },
   "devDependencies": {

@@ -1,16 +1,33 @@
+const yaml = require('js-yaml')
+fs = require('fs')
+
 const getEthcovStatus = require('./lib/ethcov.js')
+
 module.exports = app => {
   app.on([
     'pull_request.opened',
     'pull_request.synchronize',
-    'check_suite.requested',
     'check_run.rerequested'
   ],
     check
   )
 
   async function check (context) {
-    const config = await context.config('ethcov.yml')
+    const startedAt = new Date()
+    let defaultConfig = null
+
+    try {
+      defaultConfig = yaml.safeLoad(fs.readFileSync('.github/ethcov.yml', 'utf8'))
+    } catch (e) {
+      console.log(e)
+    }
+
+    const { principles, signature } = defaultConfig
+
+    const config = await context.config('ethcov.yml', {
+      signature,
+      principles
+    })
 
     const pr = context.payload.pull_request
 
@@ -23,7 +40,6 @@ module.exports = app => {
 
     const ethcovFailed = await getEthcovStatus(commits, config, pr.html_url)
 
-
     if (!ethcovFailed.length) {
       context.github.checks.create(context.repo({
         name: 'Ethcov',
@@ -31,9 +47,10 @@ module.exports = app => {
         head_sha: pr.head.sha,
         status: 'completed',
         conclusion: 'success',
+        started_at: startedAt,
         completed_at: new Date(),
         output: {
-          title: 'Ethcove',
+          title: 'Ethcov',
           summary: 'All commits pass ethical considerations check!'
         }
       }))
@@ -65,6 +82,7 @@ module.exports = app => {
         head_branch: pr.head.ref,
         head_sha: pr.head.sha,
         status: 'completed',
+        started_at: startedAt,
         conclusion: 'action_required',
         completed_at: new Data(),
         output: {
